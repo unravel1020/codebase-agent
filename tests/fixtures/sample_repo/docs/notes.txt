@@ -1,0 +1,4 @@
+Notes
+
+The sample application records every calculation so that the average result
+can be reported later. Storage is a plain JSON file.

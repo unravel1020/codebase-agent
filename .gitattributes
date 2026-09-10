@@ -1,0 +1,7 @@
+# Normalize line endings in the repository: LF everywhere, regardless of the
+# developer's core.autocrlf setting.
+* text=auto eol=lf
+
+# Real binaries used as test fixtures must never be touched.
+*.bin binary
+*.pyc binary

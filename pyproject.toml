@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codebase-agent"
+version = "0.1.0"
+description = "An LLM agent that answers questions about a local code repository (tool calling + RAG + memory + structured output + evals)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "codebase-agent" }]
+dependencies = [
+    "langchain-core>=1.0,<2.0",
+    "langchain-openai>=1.0,<2.0",
+    "langchain-text-splitters>=1.0,<2.0",
+    "faiss-cpu>=1.9",
+    "numpy>=1.26",
+    "pydantic>=2.6",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+codebase-agent = "codebase_agent.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-ra"
+filterwarnings = ["ignore::DeprecationWarning"]

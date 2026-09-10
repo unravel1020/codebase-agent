@@ -1,0 +1,65 @@
+{
+  "description": "Repository questions for codebase-agent's own source tree. expected_files are repository-relative POSIX paths; a match is any candidate path that equals or ends with an expected path.",
+  "questions": [
+    {
+      "id": "q01",
+      "question": "Where is the repository root sandbox enforced and what happens when a path escapes it?",
+      "expected_files": ["src/codebase_agent/repository.py"],
+      "kind": "security"
+    },
+    {
+      "id": "q02",
+      "question": "Which module builds the FAISS vector index and how are embeddings normalized before search?",
+      "expected_files": ["src/codebase_agent/vectorstore.py"],
+      "kind": "retrieval"
+    },
+    {
+      "id": "q03",
+      "question": "How does the agent avoid answering a question without any repository evidence?",
+      "expected_files": ["src/codebase_agent/agent.py"],
+      "kind": "agent"
+    },
+    {
+      "id": "q04",
+      "question": "What fields does the structured answer schema require and how is the confidence bounded?",
+      "expected_files": ["src/codebase_agent/schemas.py"],
+      "kind": "structured-output"
+    },
+    {
+      "id": "q05",
+      "question": "How are source files chunked for retrieval and what metadata does each chunk carry?",
+      "expected_files": ["src/codebase_agent/rag.py"],
+      "kind": "rag"
+    },
+    {
+      "id": "q06",
+      "question": "Where are the OpenAI-compatible base_url and model read from, and which provider is the default?",
+      "expected_files": ["src/codebase_agent/config.py"],
+      "kind": "config"
+    },
+    {
+      "id": "q07",
+      "question": "How is the conversation memory trimmed between turns?",
+      "expected_files": ["src/codebase_agent/memory.py"],
+      "kind": "memory"
+    },
+    {
+      "id": "q08",
+      "question": "Which tools are exposed to the model and what kinds of files does read_file refuse?",
+      "expected_files": ["src/codebase_agent/tools.py"],
+      "kind": "tools"
+    },
+    {
+      "id": "q09",
+      "question": "How can the tests run the agent loop without calling a real paid API?",
+      "expected_files": ["src/codebase_agent/offline.py"],
+      "kind": "testing"
+    },
+    {
+      "id": "q10",
+      "question": "Where is the chat model constructed and which timeout and retry settings are applied?",
+      "expected_files": ["src/codebase_agent/llm.py"],
+      "kind": "llm-client"
+    }
+  ]
+}
