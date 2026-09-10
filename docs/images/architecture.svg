@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1080" role="img" aria-labelledby="title desc">
+  <title id="title">Codebase Agent architecture</title>
+  <desc id="desc">A local repository is configured through environment settings, indexed by the RAG pipeline, and exposed through three tools to a tool-calling agent. The agent uses either a real OpenAI-compatible model or an offline scripted model, then emits a structured answer and audit trail.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#8fa9c7"/></marker>
+    <marker id="arrowAccent" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#48c7b5"/></marker>
+    <style>
+      .bg{fill:#0b1220}.title{font:500 29px 'Segoe UI',Arial,sans-serif;fill:#f5f8fc}.subtitle{font:400 14px 'Segoe UI',Arial,sans-serif;fill:#a9bad0}.h{font:500 16px 'Segoe UI',Arial,sans-serif;fill:#f5f8fc}.t{font:400 13px 'Segoe UI',Arial,sans-serif;fill:#dce8f4}.s{font:400 12px 'Segoe UI',Arial,sans-serif;fill:#a9bad0}.box{stroke-width:1.5}.config{fill:#1a2940;stroke:#6ea8dc}.runtime{fill:#1d3048;stroke:#56b4e9}.data{fill:#17333b;stroke:#48c7b5}.agent{fill:#362c4e;stroke:#c795ef}.output{fill:#3a3020;stroke:#e1ad5d}.eval{fill:#263742;stroke:#a9c5d6}.line{fill:none;stroke:#8fa9c7;stroke-width:2;marker-end:url(#arrow)}.accentLine{fill:none;stroke:#48c7b5;stroke-width:2;marker-end:url(#arrowAccent)}.dash{stroke-dasharray:7 6}
+    </style>
+  </defs>
+  <rect class="bg" width="1600" height="1080" rx="18"/>
+  <text class="title" x="60" y="64">Codebase Agent · runtime architecture</text>
+  <text class="subtitle" x="60" y="91">One local repository · explicit tool-calling loop · deterministic offline path</text>
+
+  <rect class="box config" x="60" y="140" width="250" height="130" rx="12"/>
+  <text class="h" x="82" y="174">.env / environment</text>
+  <text class="t" x="82" y="200">LLM_PROVIDER, API keys</text>
+  <text class="t" x="82" y="222">RAG + agent limits</text>
+  <text class="s" x="82" y="249">credentials stay outside code</text>
+
+  <rect class="box config" x="370" y="140" width="270" height="130" rx="12"/>
+  <text class="h" x="392" y="174">config.Settings</text>
+  <text class="t" x="392" y="200">frozen runtime snapshot</text>
+  <text class="t" x="392" y="222">presets + overrides</text>
+  <text class="s" x="392" y="249">safe_dict() masks credentials</text>
+  <path class="line" d="M310 205 H370"/>
+
+  <rect class="box runtime" x="700" y="140" width="280" height="130" rx="12"/>
+  <text class="h" x="710" y="174">CLI routing + factory</text>
+  <text class="t" x="710" y="200">ask → factory.build_agent()</text>
+  <text class="t" x="710" y="222">index/search → retriever</text>
+  <text class="t" x="710" y="244">grep/read → tools</text>
+  <text class="s" x="710" y="263">shared repository path</text>
+  <path class="line" d="M640 205 H700"/>
+
+  <rect class="box runtime" x="1020" y="125" width="250" height="88" rx="12"/>
+  <text class="h" x="1042" y="159">real model</text>
+  <text class="t" x="1042" y="185">llm.build_chat_model()</text>
+  <text class="s" x="1042" y="204">ChatOpenAI / compatible API</text>
+  <path class="line" d="M980 185 H1020"/>
+
+  <rect class="box runtime" x="1020" y="237" width="250" height="88" rx="12"/>
+  <text class="h" x="1042" y="271">offline model</text>
+  <text class="t" x="1042" y="297">ScriptedChatModel</text>
+  <text class="s" x="1042" y="316">HeuristicPolicy · no key/network</text>
+  <path class="line dash" d="M980 228 C995 228 995 281 1020 281"/>
+
+  <rect class="box runtime" x="60" y="350" width="310" height="194" rx="12"/>
+  <text class="h" x="84" y="384">Repository sandbox</text>
+  <text class="t" x="84" y="412">resolve() → root containment</text>
+  <text class="t" x="84" y="436">read_text() → size/binary caps</text>
+  <text class="t" x="84" y="460">search() → ranked line hits</text>
+  <text class="t" x="84" y="484">load_documents() → LangChain docs</text>
+  <text class="s" x="84" y="518">read-only filesystem boundary</text>
+  <path class="line" d="M830 270 V315 H215 V350"/>
+
+  <rect class="box data" x="410" y="350" width="330" height="194" rx="12"/>
+  <text class="h" x="434" y="384">RAG / CodeRetriever</text>
+  <text class="t" x="434" y="412">Python-aware chunking</text>
+  <text class="t" x="434" y="436">file + line-range metadata</text>
+  <text class="t" x="434" y="460">batched embedding (64)</text>
+  <text class="t" x="434" y="484">retrieve(query, k)</text>
+  <text class="s" x="434" y="518">semantic top-k recall</text>
+  <path class="accentLine" d="M370 447 H410"/>
+
+  <rect class="box data" x="780" y="350" width="300" height="194" rx="12"/>
+  <text class="h" x="804" y="384">Embedding backends</text>
+  <text class="t" x="804" y="412">local HashingEmbeddings</text>
+  <text class="t" x="804" y="436">512-dim · deterministic · offline</text>
+  <text class="t" x="804" y="460">or OpenAI-compatible endpoint</text>
+  <text class="s" x="804" y="518">word tokens + character 3-grams</text>
+  <path class="line" d="M830 270 V350"/>
+  <path class="line" d="M740 447 H780"/>
+
+  <rect class="box data" x="1120" y="350" width="300" height="194" rx="12"/>
+  <text class="h" x="1144" y="384">VectorIndex</text>
+  <text class="t" x="1144" y="412">FAISS IndexFlatIP</text>
+  <text class="t" x="1144" y="436">L2-normalized vectors</text>
+  <text class="t" x="1144" y="460">cosine similarity + citations</text>
+  <text class="s" x="1144" y="518">in-memory; rebuilt per process</text>
+  <path class="accentLine" d="M1080 447 H1120"/>
+
+  <rect class="box runtime" x="60" y="625" width="310" height="150" rx="12"/>
+  <text class="h" x="84" y="659">tools.py</text>
+  <text class="t" x="84" y="687">search_code</text>
+  <text class="t" x="84" y="711">read_file</text>
+  <text class="t" x="84" y="735">retrieve_context</text>
+  <text class="s" x="84" y="759">errors return as ERROR: strings</text>
+  <path class="line" d="M215 544 V625"/>
+  <path class="accentLine" d="M575 544 C575 585 370 585 370 700"/>
+  <path class="accentLine" d="M1270 544 C1270 590 370 590 370 735"/>
+
+  <rect class="box agent" x="430" y="625" width="570" height="150" rx="12"/>
+  <text class="h" x="456" y="659">agent.CodebaseAgent</text>
+  <text class="t" x="456" y="687">bind_tools → model/tool loop → evidence guard</text>
+  <text class="t" x="456" y="711">with_structured_output(CodeAnswer)</text>
+  <text class="t" x="456" y="735">ConversationMemory · sliding window</text>
+  <text class="s" x="456" y="759">ToolCallRecord audit trail</text>
+  <path class="line" d="M370 700 H430"/>
+  <path class="line" d="M1270 213 C1270 605 930 605 930 625"/>
+  <path class="line dash" d="M1270 325 C1270 605 960 605 960 625"/>
+
+  <rect class="box output" x="1060" y="625" width="360" height="150" rx="12"/>
+  <text class="h" x="1084" y="659">structured result</text>
+  <text class="t" x="1084" y="687">summary · relevant_files</text>
+  <text class="t" x="1084" y="711">evidence · confidence</text>
+  <text class="t" x="1084" y="735">assumptions · warnings</text>
+  <text class="s" x="1084" y="759">Pydantic CodeAnswer → CLI/JSON</text>
+  <path class="line" d="M1000 700 H1060"/>
+
+  <rect class="box output" x="430" y="860" width="570" height="120" rx="12"/>
+  <text class="h" x="456" y="897">CLI output / AgentResult</text>
+  <text class="t" x="456" y="925">markdown or JSON · timings · tool calls · transcript</text>
+  <text class="s" x="456" y="950">question → answer summary appended to memory</text>
+  <path class="line" d="M715 775 V860"/>
+  <path class="line" d="M1240 775 C1240 830 900 830 900 860"/>
+
+  <rect class="box eval" x="1060" y="860" width="360" height="120" rx="12"/>
+  <text class="h" x="1084" y="897">evals/run_evals.py</text>
+  <text class="t" x="1084" y="925">retrieval · mock-agent · llm</text>
+  <text class="t" x="1084" y="949">hit rate · MRR · latency → JSON</text>
+  <path class="line dash" d="M1240 775 V860"/>
+
+  <text class="s" x="60" y="1030">Solid arrows: normal data/control flow · dashed arrows: optional offline/evaluation paths</text>
+</svg>

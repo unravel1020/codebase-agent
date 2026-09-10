@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1000" role="img" aria-labelledby="title desc">
+  <title id="title">Codebase Agent project layout</title>
+  <desc id="desc">The repository is organized into root configuration files, a source package with runtime, RAG, model, and output modules, an evaluation harness, and tests with a fixture repository.</desc>
+  <defs>
+    <style>
+      .bg{fill:#0b1220}.title{font:500 29px 'Segoe UI',Arial,sans-serif;fill:#f5f8fc}.sub{font:400 14px 'Segoe UI',Arial,sans-serif;fill:#a9bad0}.h{font:500 16px 'Segoe UI',Arial,sans-serif;fill:#f5f8fc}.t{font:400 13px 'Segoe UI',Arial,sans-serif;fill:#dce8f4}.s{font:400 12px 'Segoe UI',Arial,sans-serif;fill:#a9bad0}.root{fill:#1d3048;stroke:#56b4e9;stroke-width:1.5}.runtime{fill:#362c4e;stroke:#c795ef;stroke-width:1.5}.data{fill:#17333b;stroke:#48c7b5;stroke-width:1.5}.test{fill:#3a3020;stroke:#e1ad5d;stroke-width:1.5}.line{fill:none;stroke:#8fa9c7;stroke-width:2}.branch{fill:#8fa9c7}
+    </style>
+  </defs>
+  <rect class="bg" width="1400" height="1000" rx="18"/>
+  <text class="title" x="60" y="64">codebase-agent/ · repository layout</text>
+  <text class="sub" x="60" y="91">Packaging, runtime modules, retrieval stack, evaluation harness, and hermetic tests</text>
+
+  <rect class="root" x="60" y="140" width="300" height="690" rx="14"/>
+  <text class="h" x="88" y="180">root files</text>
+  <text class="t" x="88" y="220">README.md</text>
+  <text class="t" x="88" y="252">pyproject.toml</text>
+  <text class="t" x="88" y="284">requirements.txt</text>
+  <text class="t" x="88" y="316">.env.example</text>
+  <text class="t" x="88" y="348">.gitignore</text>
+  <text class="s" x="88" y="390">entry point:</text>
+  <text class="t" x="88" y="418">codebase-agent → cli:main</text>
+  <text class="s" x="88" y="466">Python 3.11+</text>
+  <text class="s" x="88" y="494">MIT license</text>
+  <text class="s" x="88" y="540">pytest config:</text>
+  <text class="t" x="88" y="568">pythonpath=src</text>
+  <text class="t" x="88" y="600">testpaths=tests</text>
+  <text class="s" x="88" y="672">.env is local and git-ignored</text>
+
+  <path class="line" d="M360 485 H410"/><circle class="branch" cx="410" cy="485" r="5"/>
+  <path class="line" d="M410 485 V200 H455"/>
+  <path class="line" d="M410 485 H455"/>
+  <path class="line" d="M410 485 V770 H455"/>
+
+  <rect class="runtime" x="455" y="140" width="410" height="350" rx="14"/>
+  <text class="h" x="485" y="180">src/codebase_agent/ · runtime</text>
+  <text class="t" x="485" y="220">cli.py · __main__.py · __init__.py</text>
+  <text class="t" x="485" y="252">factory.py · config.py · llm.py</text>
+  <text class="t" x="485" y="284">agent.py · memory.py · schemas.py</text>
+  <text class="t" x="485" y="316">tools.py · offline.py</text>
+  <text class="s" x="485" y="366">CLI commands:</text>
+  <text class="t" x="485" y="394">ask · index · search · grep · read</text>
+  <text class="s" x="485" y="446">factory wires one repository to one agent</text>
+
+  <rect class="data" x="920" y="140" width="410" height="350" rx="14"/>
+  <text class="h" x="950" y="180">src/codebase_agent/ · retrieval</text>
+  <text class="t" x="950" y="220">repository.py</text>
+  <text class="s" x="1130" y="220">sandbox + file loading</text>
+  <text class="t" x="950" y="252">embeddings.py</text>
+  <text class="s" x="1130" y="252">local / compatible backend</text>
+  <text class="t" x="950" y="284">rag.py</text>
+  <text class="s" x="1130" y="284">chunk + retrieve</text>
+  <text class="t" x="950" y="316">vectorstore.py</text>
+  <text class="s" x="1130" y="316">FAISS + citations</text>
+  <text class="s" x="950" y="382">in-memory index, rebuilt per process</text>
+  <path class="line" d="M865 315 H920"/>
+
+  <rect class="test" x="455" y="560" width="410" height="270" rx="14"/>
+  <text class="h" x="485" y="600">tests/</text>
+  <text class="t" x="485" y="640">conftest.py</text>
+  <text class="t" x="485" y="672">test_read_file.py · test_search_code.py</text>
+  <text class="t" x="485" y="704">test_path_security.py · test_retrieval.py</text>
+  <text class="t" x="485" y="736">test_agent_workflow.py · test_offline.py</text>
+  <text class="s" x="485" y="780">fixtures/sample_repo/ · tiny app + data</text>
+
+  <rect class="test" x="920" y="560" width="410" height="270" rx="14"/>
+  <text class="h" x="950" y="600">evals/</text>
+  <text class="t" x="950" y="640">questions.json</text>
+  <text class="s" x="1130" y="640">10 repository questions</text>
+  <text class="t" x="950" y="672">run_evals.py</text>
+  <text class="s" x="1130" y="672">retrieval / mock-agent / llm</text>
+  <text class="t" x="950" y="704">results/</text>
+  <text class="s" x="1130" y="704">timestamped JSON reports</text>
+  <text class="s" x="950" y="780">credentials masked in reports</text>
+  <path class="line" d="M865 695 H920"/>
+
+  <text class="s" x="60" y="910">Color key: blue = package/config · purple = agent runtime · teal = repository/RAG · amber = tests/evaluation</text>
+  <text class="s" x="60" y="940">The source package is installed from src/; tests and evals exercise the same public wiring.</text>
+</svg>

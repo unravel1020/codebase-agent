@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 760" role="img" aria-labelledby="title desc">
+  <title id="title">Codebase Agent RAG pipeline</title>
+  <desc id="desc">Repository files are filtered and read into documents, split into line-citable chunks, embedded in batches, indexed in FAISS, and queried for top-k chunks exposed through retrieve_context.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#8fa9c7"/></marker>
+    <marker id="greenArrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#48c7b5"/></marker>
+    <style>
+      .bg{fill:#0b1220}.title{font:500 29px 'Segoe UI',Arial,sans-serif;fill:#f5f8fc}.sub{font:400 14px 'Segoe UI',Arial,sans-serif;fill:#a9bad0}.h{font:500 15px 'Segoe UI',Arial,sans-serif;fill:#f5f8fc}.t{font:400 12px 'Segoe UI',Arial,sans-serif;fill:#dce8f4}.s{font:400 11px 'Segoe UI',Arial,sans-serif;fill:#a9bad0}.node{fill:#17333b;stroke:#48c7b5;stroke-width:1.5}.source{fill:#1d3048;stroke:#56b4e9;stroke-width:1.5}.query{fill:#362c4e;stroke:#c795ef;stroke-width:1.5}.line{fill:none;stroke:#8fa9c7;stroke-width:2;marker-end:url(#arrow)}.green{fill:none;stroke:#48c7b5;stroke-width:2;marker-end:url(#greenArrow)}.dash{stroke-dasharray:7 6}.label{font:500 12px 'Segoe UI',Arial,sans-serif;fill:#a9bad0}
+    </style>
+  </defs>
+  <rect class="bg" width="1600" height="760" rx="18"/>
+  <text class="title" x="60" y="62">RAG pipeline · build once, retrieve by citation</text>
+  <text class="sub" x="60" y="89">Index construction is bounded by Repository safety checks; query-time retrieval returns file:start-end locations</text>
+  <text class="label" x="60" y="140">INDEX CONSTRUCTION</text>
+
+  <rect class="source" x="60" y="175" width="205" height="130" rx="12"/>
+  <text class="h" x="162" y="210" text-anchor="middle">repository files</text>
+  <text class="t" x="162" y="237" text-anchor="middle">os.walk(root)</text>
+  <text class="s" x="162" y="266" text-anchor="middle">max 400 files by default</text>
+  <path class="line" d="M265 240 H300"/>
+
+  <rect class="source" x="300" y="175" width="235" height="130" rx="12"/>
+  <text class="h" x="417" y="210" text-anchor="middle">safe filter</text>
+  <text class="t" x="417" y="234" text-anchor="middle">text suffix/name</text>
+  <text class="t" x="417" y="258" text-anchor="middle">not excluded dirs</text>
+  <text class="s" x="417" y="284" text-anchor="middle">≤ MAX_FILE_BYTES · not binary</text>
+  <path class="line" d="M535 240 H570"/>
+
+  <rect class="node" x="570" y="175" width="220" height="130" rx="12"/>
+  <text class="h" x="680" y="210" text-anchor="middle">LangChain Document</text>
+  <text class="t" x="680" y="237" text-anchor="middle">read_text() per file</text>
+  <text class="t" x="680" y="261" text-anchor="middle">file · suffix · size</text>
+  <text class="s" x="680" y="284" text-anchor="middle">metadata: file/suffix/size</text>
+  <path class="line" d="M790 240 H825"/>
+
+  <rect class="node" x="825" y="175" width="220" height="130" rx="12"/>
+  <text class="h" x="935" y="210" text-anchor="middle">chunk</text>
+  <text class="t" x="935" y="237" text-anchor="middle">Python-aware .py/.pyi</text>
+  <text class="s" x="935" y="266" text-anchor="middle">generic separators otherwise</text>
+  <path class="line" d="M1045 240 H1080"/>
+
+  <rect class="node" x="1080" y="175" width="220" height="130" rx="12"/>
+  <text class="h" x="1190" y="210" text-anchor="middle">citation metadata</text>
+  <text class="t" x="1190" y="237" text-anchor="middle">start_index → line span</text>
+  <text class="s" x="1190" y="266" text-anchor="middle">file:start_line-end_line</text>
+  <path class="line" d="M1300 240 H1335"/>
+
+  <rect class="node" x="1335" y="175" width="205" height="130" rx="12"/>
+  <text class="h" x="1437" y="210" text-anchor="middle">embed batches</text>
+  <text class="t" x="1437" y="237" text-anchor="middle">64 chunks per batch</text>
+  <text class="s" x="1437" y="266" text-anchor="middle">embed_documents()</text>
+
+  <path class="line" d="M1437 305 V330"/>
+  <rect class="node" x="1080" y="330" width="460" height="100" rx="12"/>
+  <text class="h" x="1310" y="361" text-anchor="middle">FAISS VectorIndex</text>
+  <text class="t" x="1310" y="388" text-anchor="middle">L2-normalize vectors → IndexFlatIP</text>
+  <text class="s" x="1310" y="414" text-anchor="middle">cosine similarity · exact · in-memory</text>
+  <path class="line" d="M1080 380 C950 380 950 310 950 305"/>
+  <text class="label" x="970" y="319">chunks + vectors</text>
+
+  <text class="label" x="60" y="390">QUERY / RETRIEVAL</text>
+  <rect class="query" x="60" y="430" width="225" height="130" rx="12"/>
+  <text class="h" x="172" y="465" text-anchor="middle">natural-language query</text>
+  <text class="t" x="172" y="492" text-anchor="middle">retrieve(query, k)</text>
+  <text class="s" x="172" y="521" text-anchor="middle">default k = RAG_TOP_K (6)</text>
+  <path class="green" d="M285 495 H330"/>
+  <rect class="query" x="330" y="430" width="250" height="130" rx="12"/>
+  <text class="h" x="455" y="465" text-anchor="middle">embed_query()</text>
+  <text class="t" x="455" y="492" text-anchor="middle">same selected backend</text>
+  <text class="s" x="455" y="521" text-anchor="middle">local hashing or compatible API</text>
+  <path class="green" d="M580 495 H625"/>
+  <rect class="query" x="625" y="430" width="270" height="130" rx="12"/>
+  <text class="h" x="760" y="465" text-anchor="middle">FAISS search</text>
+  <text class="t" x="760" y="492" text-anchor="middle">top-k descending score</text>
+  <text class="s" x="760" y="521" text-anchor="middle">query vector is normalized</text>
+  <path class="green" d="M895 495 H940"/>
+  <rect class="query" x="940" y="430" width="270" height="130" rx="12"/>
+  <text class="h" x="1075" y="465" text-anchor="middle">RetrievedChunk list</text>
+  <text class="t" x="1075" y="492" text-anchor="middle">text + score + citation</text>
+  <text class="s" x="1075" y="521" text-anchor="middle">file:start-end</text>
+  <path class="green" d="M1210 495 H1255"/>
+  <rect class="query" x="1255" y="430" width="285" height="130" rx="12"/>
+  <text class="h" x="1397" y="465" text-anchor="middle">retrieve_context tool</text>
+  <text class="t" x="1397" y="492" text-anchor="middle">formatted evidence → agent</text>
+  <text class="s" x="1397" y="521" text-anchor="middle">semantic recall complements search_code</text>
+  <path class="green" d="M1080 430 C980 430 980 400 760 400 V430"/>
+  <text class="label" x="760" y="374">index already built</text>
+  <text class="s" x="60" y="650">The default local embedder is deterministic and requires no key or network. OpenAI-compatible embeddings are optional.</text>
+  <text class="s" x="60" y="680">No persistent index is written: each process rebuilds the in-memory FAISS index.</text>
+</svg>

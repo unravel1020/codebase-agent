@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 620" role="img" aria-labelledby="title desc">
+  <title id="title">Codebase Agent execution modes</title>
+  <desc id="desc">Offline commands use the local hashing embedder and scripted model where needed. Online commands use an OpenAI-compatible chat endpoint. Both paths share repository, tools, RAG, and structured output code.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#8fa9c7"/></marker>
+    <style>
+      .bg{fill:#0b1220}.title{font:500 29px 'Segoe UI',Arial,sans-serif;fill:#f5f8fc}.sub{font:400 14px 'Segoe UI',Arial,sans-serif;fill:#a9bad0}.h{font:500 16px 'Segoe UI',Arial,sans-serif;fill:#f5f8fc}.t{font:400 13px 'Segoe UI',Arial,sans-serif;fill:#dce8f4}.s{font:400 12px 'Segoe UI',Arial,sans-serif;fill:#a9bad0}.offline{fill:#17333b;stroke:#48c7b5;stroke-width:1.5}.online{fill:#362c4e;stroke:#c795ef;stroke-width:1.5}.shared{fill:#1d3048;stroke:#56b4e9;stroke-width:1.5}.line{fill:none;stroke:#8fa9c7;stroke-width:2;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect class="bg" width="1400" height="620" rx="18"/>
+  <text class="title" x="60" y="62">Execution modes · one shared pipeline</text>
+  <text class="sub" x="60" y="89">All repository and retrieval operations are offline; only the real chat model path requires an API key</text>
+
+  <rect class="offline" x="60" y="145" width="360" height="330" rx="14"/>
+  <text class="h" x="90" y="185">OFFLINE · no key / no network</text>
+  <text class="t" x="90" y="225">index</text>
+  <text class="t" x="90" y="255">search</text>
+  <text class="t" x="90" y="285">grep</text>
+  <text class="t" x="90" y="315">read</text>
+  <text class="t" x="90" y="345">ask --offline</text>
+  <text class="t" x="90" y="375">pytest · retrieval eval</text>
+  <text class="t" x="90" y="405">mock-agent eval</text>
+  <text class="s" x="90" y="449">HashingEmbeddings + ScriptedChatModel</text>
+  <path class="line" d="M420 310 H510"/>
+
+  <rect class="shared" x="510" y="190" width="380" height="240" rx="14"/>
+  <text class="h" x="700" y="230" text-anchor="middle">shared implementation</text>
+  <text class="t" x="700" y="270" text-anchor="middle">Repository sandbox</text>
+  <text class="t" x="700" y="300" text-anchor="middle">RAG + FAISS + tools</text>
+  <text class="t" x="700" y="330" text-anchor="middle">explicit agent loop</text>
+  <text class="t" x="700" y="360" text-anchor="middle">Pydantic CodeAnswer</text>
+  <text class="s" x="700" y="400" text-anchor="middle">same code path is testable offline</text>
+  <path class="line" d="M890 310 H980"/>
+
+  <rect class="online" x="980" y="145" width="360" height="330" rx="14"/>
+  <text class="h" x="1010" y="185">ONLINE · API key required</text>
+  <text class="t" x="1010" y="225">ask</text>
+  <text class="t" x="1010" y="255">evals/run_evals.py --mode llm</text>
+  <text class="t" x="1010" y="305">ChatOpenAI</text>
+  <text class="t" x="1010" y="335">OpenAI-compatible base_url</text>
+  <text class="t" x="1010" y="365">LLM_MODEL + LLM_API_KEY</text>
+  <text class="s" x="1010" y="419">DeepSeek default; vendor-neutral overrides</text>
+
+  <text class="s" x="60" y="540">Embedding provider is independent: local hashing is the default; OpenAI-compatible embeddings are optional.</text>
+  <text class="s" x="60" y="568">The offline agent uses a heuristic policy for model decisions, but still exercises the real tools and loop.</text>
+</svg>

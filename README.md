@@ -29,44 +29,9 @@ python -m codebase_agent ask --repo . "How does the path sandbox work?"
 
 ## Architecture
 
-```
-                 ┌──────────────────────────── CLI (src/codebase_agent/cli.py) ────────────────────────────┐
-                 │  ask | index | search | grep | read                                                  │
-                 └───────────────────────────────────────────┬──────────────────────────────────────────────┘
-                                                             │
-   ┌───────────────┐   Settings.from_env()   ┌───────────────▼───────────────┐   ChatOpenAI(base_url, model,
-   │ .env / env    │────────────────────────▶│  config.Settings (frozen)     │   api_key, timeout, retries)
-   │ (no secrets   │                         └───────┬───────────────┬───────┘◀──────────── llm.build_chat_model
-   │  in code)     │                                 │               │
-   └───────────────┘                                 │               │
-                                                     │               │
-                        ┌────────────────────────────▼──┐     ┌──────▼────────────────────┐
-                        │ Repository (sandbox)          │     │ Embeddings                │
-                        │  resolve() -> root check      │     │  local = hashing (offline)│
-                        │  read_text() size/binary cap  │     │  openai = any compatible  │
-                        │  search() symbol/keyword      │     └──────┬────────────────────┘
-                        └───────┬───────────────┬───────┘            │
-                                │               │                    │
-              ┌─────────────────▼──┐   ┌────────▼─────────┐  ┌───────▼─────────────────┐
-              │ tools.py           │   │ rag.CodeRetriever│  │ vectorstore.VectorIndex │
-              │  search_code       │   │  chunk + embed   │─▶│  FAISS IndexFlatIP      │
-              │  read_file         │   │  top-k retrieve  │  │  (cosine = inner prod)  │
-              │  retrieve_context  │◀──┴──────────────────┘  └─────────────────────────┘
-              └─────────┬──────────┘
-                        │  LangChain BaseTool
-              ┌─────────▼──────────────────────────────────────────────┐
-              │ agent.CodebaseAgent  (tool-calling loop)              │
-              │   llm.bind_tools(tools) -> tool_calls -> ToolMessage  │
-              │   memory.ConversationMemory (sliding window)          │
-              │   final step: with_structured_output(CodeAnswer)      │
-              └─────────┬─────────────────────────────────────────────┘
-                        │
-              ┌─────────▼─────────────────────┐        ┌───────────────────────────┐
-              │ schemas.CodeAnswer (Pydantic) │        │ evals/run_evals.py        │
-              │  summary / relevant_files /   │        │  hit rate, MRR, latency,  │
-              │  evidence / confidence        │        │  tool-call count -> JSON  │
-              └───────────────────────────────┘        └───────────────────────────┘
-```
+![Codebase Agent runtime architecture](docs/images/architecture.svg)
+
+The runtime wires one sandboxed repository, an optional in-memory RAG index, three tools, and either a real compatible chat model or the offline scripted model into the explicit agent loop.
 
 Module responsibilities (one job each):
 
@@ -120,26 +85,17 @@ Properties that make it testable:
 * Every step leaves an audit trail (`AgentResult.to_dict()`): tool name, args,
   ok/error, per-call duration, iteration count, total latency.
 
-```
-question ──▶ [model] ──tool_calls──▶ [tools] ──ToolMessage──▶ [model] ──▶ answer
-                │                                                        │
-                └──────────── no tool calls? nudge once ─────────────────┘
-                                                                         │
-                                        with_structured_output(CodeAnswer) ◀┘
-```
+![Codebase Agent tool-calling loop](docs/images/agent-loop.svg)
+
+The loop records every tool call, nudges once when evidence is missing, enforces iteration and tool-call budgets, then produces a guarded structured answer and updates memory.
 
 ---
 
 ## RAG Pipeline
 
-```
-repository files ──▶ filter (text suffix, not excluded dir, ≤ MAX_FILE_BYTES, not binary)
-                 ──▶ chunk (RecursiveCharacterTextSplitter; Python-aware separators for .py)
-                 ──▶ metadata: file + start_line/end_line (from add_start_index)
-                 ──▶ embed (batches of 64)
-                 ──▶ FAISS IndexFlatIP over L2-normalized vectors  (inner product = cosine)
-                 ──▶ retrieve(query, k) ──▶ top-k chunks with citations
-```
+![Codebase Agent RAG pipeline](docs/images/rag-pipeline.svg)
+
+Index construction is bounded by the repository sandbox; query-time retrieval returns top-k chunks with stable `file:start-end` citations.
 
 * **Chunking** — `langchain_text_splitters.RecursiveCharacterTextSplitter`.
   `.py`/`.pyi` use `Language.PYTHON` separators (class/def boundaries first);
@@ -165,47 +121,9 @@ repository files ──▶ filter (text suffix, not excluded dir, ≤ MAX_FILE_B
 
 ## Project layout
 
-```
-codebase-agent/
-├── README.md
-├── pyproject.toml            # packaging + pytest config (pythonpath=src)
-├── requirements.txt
-├── .env.example              # every variable, no secrets
-├── .gitignore
-├── src/codebase_agent/
-│   ├── __init__.py           # public API
-│   ├── __main__.py           # python -m codebase_agent
-│   ├── config.py
-│   ├── llm.py
-│   ├── embeddings.py
-│   ├── repository.py
-│   ├── tools.py
-│   ├── vectorstore.py
-│   ├── rag.py
-│   ├── memory.py
-│   ├── schemas.py
-│   ├── agent.py
-│   ├── offline.py
-│   ├── factory.py
-│   └── cli.py
-├── evals/
-│   ├── questions.json        # 10 repository questions + expected files
-│   ├── run_evals.py          # retrieval | mock-agent | llm
-│   └── results/              # generated JSON reports
-└── tests/
-    ├── conftest.py           # hermetic env + fixtures
-    ├── fixtures/sample_repo/ # tiny app used by tests and offline demos
-    ├── test_read_file.py
-    ├── test_search_code.py
-    ├── test_path_security.py
-    ├── test_retrieval.py
-    ├── test_structured_output.py
-    ├── test_agent_workflow.py
-    ├── test_offline.py
-    ├── test_memory.py
-    ├── test_config.py
-    └── test_cli.py
-```
+![Codebase Agent project layout](docs/images/project-layout.svg)
+
+The source package contains the runtime and retrieval layers; `evals/` benchmarks them and `tests/` exercises the same wiring against a fixture repository.
 
 ---
 
@@ -254,6 +172,10 @@ Exit codes: `0` success · `2` configuration problem (missing key) · `3` provid
 problem (401 / 404 / connection / rate limit) · `130` interrupted.
 
 Commands (only `ask` without `--offline` needs a key):
+
+![Codebase Agent execution modes](docs/images/execution-modes.svg)
+
+All commands share the repository, tools, RAG, and structured-output implementation; only the real chat-model path requires an API key.
 
 ```bash
 # index a repository and report chunk stats
@@ -358,6 +280,10 @@ python evals/run_evals.py --mode retrieval      # RAG metrics only, no API key
 python evals/run_evals.py --mode mock-agent     # full agent loop, offline
 python evals/run_evals.py --mode llm            # real model, needs LLM_API_KEY
 ```
+
+![Codebase Agent evaluation flow](docs/images/evaluation-flow.svg)
+
+The evaluation harness runs independent questions through retrieval-only, offline mock-agent, or real-LLM modes, aggregates ranking and execution metrics, and writes masked timestamped JSON reports.
 
 * Questions and expected files live in `evals/questions.json` (10 questions about
   this repository's own source).

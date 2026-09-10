@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1160" role="img" aria-labelledby="title desc">
+  <title id="title">Codebase Agent tool-calling loop</title>
+  <desc id="desc">The agent assembles a prompt, invokes a model, optionally executes requested tools and feeds ToolMessages back into the model, then synthesizes a guarded structured answer and updates memory.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#91abc6"/></marker>
+    <marker id="greenArrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#55d0bd"/></marker>
+    <style>
+      .bg{fill:#0b1220}.title{font:500 29px 'Segoe UI',Arial,sans-serif;fill:#f5f8fc}.sub{font:400 14px 'Segoe UI',Arial,sans-serif;fill:#a9bad0}.h{font:500 16px 'Segoe UI',Arial,sans-serif;fill:#f5f8fc}.t{font:400 13px 'Segoe UI',Arial,sans-serif;fill:#dce8f4}.s{font:400 12px 'Segoe UI',Arial,sans-serif;fill:#a9bad0}.step{fill:#1d3048;stroke:#56b4e9;stroke-width:1.5}.decision{fill:#362c4e;stroke:#c795ef;stroke-width:1.5}.tool{fill:#17333b;stroke:#55d0bd;stroke-width:1.5}.out{fill:#3a3020;stroke:#e1ad5d;stroke-width:1.5}.guard{fill:#3e2734;stroke:#e8869b;stroke-width:1.5}.line{fill:none;stroke:#91abc6;stroke-width:2;marker-end:url(#arrow)}.green{fill:none;stroke:#55d0bd;stroke-width:2;marker-end:url(#greenArrow)}.dash{stroke-dasharray:7 6}.label{font:500 12px 'Segoe UI',Arial,sans-serif;fill:#a9bad0}
+    </style>
+  </defs>
+  <rect class="bg" width="1400" height="1160" rx="18"/>
+  <text class="title" x="60" y="64">CodebaseAgent.run(question) · explicit control flow</text>
+  <text class="sub" x="60" y="91">Evidence-first investigation with bounded iterations and structured synthesis</text>
+
+  <rect class="step" x="510" y="125" width="380" height="72" rx="12"/>
+  <text class="h" x="700" y="155" text-anchor="middle">question</text>
+  <text class="t" x="700" y="179" text-anchor="middle">user asks about one repository</text>
+  <path class="line" d="M700 197 V235"/>
+
+  <rect class="step" x="430" y="235" width="540" height="84" rx="12"/>
+  <text class="h" x="700" y="267" text-anchor="middle">prompt assembly</text>
+  <text class="t" x="700" y="292" text-anchor="middle">SystemMessage + memory.messages + HumanMessage</text>
+  <path class="line" d="M700 319 V357"/>
+
+  <rect class="step" x="430" y="357" width="540" height="84" rx="12"/>
+  <text class="h" x="700" y="389" text-anchor="middle">model step</text>
+  <text class="t" x="700" y="414" text-anchor="middle">llm.bind_tools(tools).invoke(messages)</text>
+  <text class="s" x="700" y="433" text-anchor="middle">iteration ceiling checked before each invoke</text>
+  <path class="line" d="M700 441 V479"/>
+
+  <polygon class="decision" points="700,479 835,555 700,631 565,555"/>
+  <text class="h" x="700" y="550" text-anchor="middle">tool_calls?</text>
+  <text class="s" x="700" y="572" text-anchor="middle">AIMessage decision</text>
+
+  <path class="green" d="M565 555 H250 V675"/>
+  <text class="label" x="390" y="541" text-anchor="middle">yes</text>
+  <rect class="tool" x="70" y="675" width="360" height="126" rx="12"/>
+  <text class="h" x="250" y="709" text-anchor="middle">execute requested tools</text>
+  <text class="t" x="250" y="734" text-anchor="middle">search_code · read_file · retrieve_context</text>
+  <text class="s" x="250" y="761" text-anchor="middle">Repository boundary + RAG, errors become ERROR:</text>
+  <path class="green" d="M250 801 V845"/>
+  <rect class="tool" x="70" y="845" width="360" height="126" rx="12"/>
+  <text class="h" x="250" y="879" text-anchor="middle">record and append</text>
+  <text class="t" x="250" y="904" text-anchor="middle">ToolCallRecord + ToolMessage</text>
+  <text class="s" x="250" y="931" text-anchor="middle">timing, args, status, output preview</text>
+  <path class="line dash" d="M430 950 C600 1000 820 1000 970 950"/>
+  <text class="label" x="700" y="1010" text-anchor="middle">if tool-call budget reached</text>
+  <path class="green" d="M430 908 C500 908 500 390 430 390"/>
+  <text class="label" x="465" y="638">next iteration</text>
+
+  <path class="line" d="M835 555 H1120 V675"/>
+  <text class="label" x="965" y="541" text-anchor="middle">no</text>
+  <rect class="decision" x="970" y="675" width="390" height="126" rx="12"/>
+  <text class="h" x="1165" y="709" text-anchor="middle">evidence guard</text>
+  <text class="t" x="1165" y="734" text-anchor="middle">records empty and require_evidence?</text>
+  <text class="s" x="1165" y="755" text-anchor="middle">nudge once; otherwise continue</text>
+  <text class="s" x="1165" y="781" text-anchor="middle">still no evidence → confidence ≤ 0.2</text>
+  <path class="green" d="M970 738 H850 V390"/>
+  <text class="label" x="908" y="725">nudge</text>
+  <path class="line" d="M1165 801 V845"/>
+  <text class="label" x="1185" y="827">answer</text>
+
+  <rect class="guard" x="970" y="845" width="390" height="126" rx="12"/>
+  <text class="h" x="1165" y="879" text-anchor="middle">budget / completion</text>
+  <text class="t" x="1165" y="904" text-anchor="middle">max iterations or tool calls → answer now</text>
+  <text class="s" x="1165" y="931" text-anchor="middle">otherwise final AIMessage is accepted</text>
+  <path class="line" d="M970 908 H810 V1020"/>
+
+  <rect class="out" x="480" y="1020" width="440" height="80" rx="12"/>
+  <text class="h" x="700" y="1052" text-anchor="middle">structured synthesis</text>
+  <text class="t" x="700" y="1072" text-anchor="middle">with_structured_output · text JSON fallback</text>
+  <text class="s" x="700" y="1090" text-anchor="middle">guards → memory → AgentResult</text>
+  <path class="line" d="M920 1060 H1120"/>
+  <rect class="out" x="1120" y="1020" width="220" height="80" rx="12"/>
+  <text class="h" x="1230" y="1052" text-anchor="middle">answer</text>
+  <text class="s" x="1230" y="1076" text-anchor="middle">Markdown or JSON</text>
+
+  <text class="s" x="60" y="1128">Guard outcomes: no successful tool call → confidence ≤ 0.2; no cited evidence → confidence ≤ 0.5.</text>
+  <text class="s" x="60" y="1148">Green arrows loop through tools; the pink guard path forces completion at hard budgets.</text>
+</svg>

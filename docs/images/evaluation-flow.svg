@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 720" role="img" aria-labelledby="title desc">
+  <title id="title">Codebase Agent evaluation flow</title>
+  <desc id="desc">Evaluation questions and expected files feed a shared repository index. Three modes run retrieval only, a mock agent, or a real LLM agent, then aggregate ranking, latency, tool, evidence, and confidence metrics into timestamped JSON reports.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#8fa9c7"/></marker>
+    <style>
+      .bg{fill:#0b1220}.title{font:500 29px 'Segoe UI',Arial,sans-serif;fill:#f5f8fc}.sub{font:400 14px 'Segoe UI',Arial,sans-serif;fill:#a9bad0}.h{font:500 16px 'Segoe UI',Arial,sans-serif;fill:#f5f8fc}.t{font:400 13px 'Segoe UI',Arial,sans-serif;fill:#dce8f4}.s{font:400 12px 'Segoe UI',Arial,sans-serif;fill:#a9bad0}.input{fill:#1d3048;stroke:#56b4e9;stroke-width:1.5}.mode{fill:#362c4e;stroke:#c795ef;stroke-width:1.5}.metric{fill:#17333b;stroke:#48c7b5;stroke-width:1.5}.out{fill:#3a3020;stroke:#e1ad5d;stroke-width:1.5}.line{fill:none;stroke:#8fa9c7;stroke-width:2;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect class="bg" width="1500" height="720" rx="18"/>
+  <text class="title" x="60" y="62">Evaluation harness · comparable modes, timestamped reports</text>
+  <text class="sub" x="60" y="89">Questions stay independent; retrieval and agent modes share the same repository and RAG construction</text>
+
+  <rect class="input" x="60" y="180" width="270" height="180" rx="14"/>
+  <text class="h" x="195" y="220" text-anchor="middle">evals/questions.json</text>
+  <text class="t" x="195" y="258" text-anchor="middle">10 repository questions</text>
+  <text class="t" x="195" y="288" text-anchor="middle">expected_files + kind</text>
+  <text class="s" x="195" y="328" text-anchor="middle">one spec per independent case</text>
+  <path class="line" d="M330 270 H390"/>
+
+  <rect class="input" x="390" y="180" width="285" height="180" rx="14"/>
+  <text class="h" x="532" y="220" text-anchor="middle">shared setup</text>
+  <text class="t" x="532" y="258" text-anchor="middle">Settings + Repository</text>
+  <text class="t" x="532" y="288" text-anchor="middle">CodeRetriever + local embeddings</text>
+  <text class="s" x="532" y="328" text-anchor="middle">evals excluded from index by default</text>
+  <path class="line" d="M675 270 H735"/>
+
+  <rect class="mode" x="735" y="120" width="230" height="120" rx="14"/>
+  <text class="h" x="850" y="160" text-anchor="middle">retrieval</text>
+  <text class="t" x="850" y="190" text-anchor="middle">RAG only · no key</text>
+  <text class="s" x="850" y="216" text-anchor="middle">top-k candidates</text>
+  <rect class="mode" x="735" y="270" width="230" height="120" rx="14"/>
+  <text class="h" x="850" y="310" text-anchor="middle">mock-agent</text>
+  <text class="t" x="850" y="340" text-anchor="middle">heuristic loop · no key</text>
+  <text class="s" x="850" y="366" text-anchor="middle">tools + structured answer</text>
+  <rect class="mode" x="735" y="420" width="230" height="120" rx="14"/>
+  <text class="h" x="850" y="460" text-anchor="middle">llm</text>
+  <text class="t" x="850" y="490" text-anchor="middle">real model · API key</text>
+  <text class="s" x="850" y="516" text-anchor="middle">same metrics + answer signals</text>
+  <path class="line" d="M675 270 H710 V180 H735"/>
+  <path class="line" d="M710 270 H735"/>
+  <path class="line" d="M710 270 V480 H735"/>
+
+  <rect class="metric" x="1030" y="180" width="220" height="300" rx="14"/>
+  <text class="h" x="1140" y="220" text-anchor="middle">aggregate metrics</text>
+  <text class="t" x="1140" y="260" text-anchor="middle">hit_rate · MRR</text>
+  <text class="t" x="1140" y="290" text-anchor="middle">latency avg / max</text>
+  <text class="t" x="1140" y="320" text-anchor="middle">tool_calls avg / total</text>
+  <text class="t" x="1140" y="350" text-anchor="middle">iterations_avg</text>
+  <text class="t" x="1140" y="380" text-anchor="middle">evidence_rate</text>
+  <text class="t" x="1140" y="410" text-anchor="middle">confidence_avg</text>
+  <text class="s" x="1140" y="450" text-anchor="middle">per-question rank + notes</text>
+  <path class="line" d="M965 180 H1000 V330 H1030"/>
+  <path class="line" d="M965 330 H1030"/>
+  <path class="line" d="M965 480 H1000 V330 H1030"/>
+
+  <rect class="out" x="1300" y="225" width="150" height="210" rx="14"/>
+  <text class="h" x="1375" y="265" text-anchor="middle">JSON report</text>
+  <text class="t" x="1375" y="305" text-anchor="middle">mode</text>
+  <text class="t" x="1375" y="335" text-anchor="middle">settings masked</text>
+  <text class="t" x="1375" y="365" text-anchor="middle">index stats</text>
+  <text class="s" x="1375" y="402" text-anchor="middle">results/</text>
+  <text class="s" x="1375" y="420" text-anchor="middle">&lt;mode&gt;-timestamp</text>
+  <text class="s" x="1375" y="438" text-anchor="middle">.json</text>
+  <path class="line" d="M1250 330 H1300"/>
+
+  <text class="s" x="60" y="630">Ranking: a hit occurs when a candidate path matches an expected path; MRR uses the first matching rank.</text>
+  <text class="s" x="60" y="658">The recorded baseline uses 165 chunks / 41 files, local embeddings, and k=6; results are not a model-quality benchmark.</text>
+</svg>
