@@ -44,31 +44,35 @@ jobs:
       - name: Import check
         run: python -c "import codebase_agent; print('codebase-agent', codebase_agent.__version__)"
 
+      # Intermediate artifacts go to $RUNNER_TEMP, never into the checkout: the
+      # evaluations index this repository, so a stray JSON in the worktree would
+      # silently join the corpus and change the measured numbers.
       - name: Run tests
         shell: bash
         run: |
           set -o pipefail
-          python -m pytest -q --tb=short | tee pytest.log
+          python -m pytest -q --tb=short | tee "$RUNNER_TEMP/pytest.log"
 
       - name: Offline agent demo (no API key)
+        shell: bash
         run: |
           python -m codebase_agent ask \
             --repo tests/fixtures/sample_repo \
             "How are calculation results persisted to disk?" \
-            --offline --json > demo.json
-          python -c "import json; d = json.load(open('demo.json')); print('tool calls:', d['tool_call_count'], '| used evidence:', d['used_evidence'], '| files:', d['answer']['relevant_files'])"
+            --offline --json > "$RUNNER_TEMP/demo.json"
+          python -c "import json, os; d = json.load(open(os.path.join(os.environ['RUNNER_TEMP'], 'demo.json'))); print('tool calls:', d['tool_call_count'], '| used evidence:', d['used_evidence'], '| files:', d['answer']['relevant_files'])"
 
       - name: Retrieval evaluation (no API key)
         shell: bash
         run: |
           set -o pipefail
-          python evals/run_evals.py --mode retrieval | tee eval-retrieval.log
+          python evals/run_evals.py --mode retrieval | tee "$RUNNER_TEMP/eval-retrieval.log"
 
       - name: Agent-loop evaluation (no API key)
         shell: bash
         run: |
           set -o pipefail
-          python evals/run_evals.py --mode mock-agent | tee eval-mock-agent.log
+          python evals/run_evals.py --mode mock-agent | tee "$RUNNER_TEMP/eval-mock-agent.log"
 
       - name: Write job summary
         if: always()
@@ -79,15 +83,15 @@ jobs:
             echo
             echo "### pytest"
             echo '```'
-            tail -n 4 pytest.log 2>/dev/null || echo "(no output)"
+            tail -n 4 "$RUNNER_TEMP/pytest.log" 2>/dev/null || echo "(no output)"
             echo '```'
             echo "### retrieval eval"
             echo '```'
-            grep -E "corpus |index |hit rate|MRR|latency" eval-retrieval.log 2>/dev/null || echo "(no output)"
+            grep -E "corpus |index |hit rate|MRR|latency" "$RUNNER_TEMP/eval-retrieval.log" 2>/dev/null || echo "(no output)"
             echo '```'
             echo "### mock-agent eval"
             echo '```'
-            grep -E "corpus |index |hit rate|MRR|latency|tool calls|evidence rate" eval-mock-agent.log 2>/dev/null || echo "(no output)"
+            grep -E "corpus |index |hit rate|MRR|latency|tool calls|evidence rate" "$RUNNER_TEMP/eval-mock-agent.log" 2>/dev/null || echo "(no output)"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
