@@ -205,6 +205,7 @@ class CodebaseAgent:
             if not ai.tool_calls:
                 final = ai
                 break
+            #todo to be optimized: If the budget of tools run out, the more resaonable deals is to give the model last chance to answer without tools.
 
             if len(records) >= self.settings.max_tool_calls:
                 messages.append(

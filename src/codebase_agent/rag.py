@@ -39,7 +39,7 @@ def _line_span(text: str, start_index: int, chunk: str) -> tuple[int, int]:
     start_line = text[:start_index].count("\n") + 1
     end_line = start_line + max(chunk.count("\n"), 0)
     return start_line, end_line
-
+# todo fix the bug of the search. IF the same text reveals again, this func still find the first outcome.
 
 def chunk_documents(
     documents: Iterable[Document],
@@ -61,8 +61,7 @@ def chunk_documents(
             if not piece.strip():
                 continue
             start_index = text.find(piece)
-            if start_index < 0:
-                start_index = 0
+            start_index = max(start_index, 0)
             start_line, end_line = _line_span(text, start_index, piece)
             chunks.append(
                 RetrievedChunk(
