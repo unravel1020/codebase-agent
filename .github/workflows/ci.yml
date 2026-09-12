@@ -83,11 +83,11 @@ jobs:
             echo '```'
             echo "### retrieval eval"
             echo '```'
-            grep -E "index |hit rate|MRR|latency" eval-retrieval.log 2>/dev/null || echo "(no output)"
+            grep -E "corpus |index |hit rate|MRR|latency" eval-retrieval.log 2>/dev/null || echo "(no output)"
             echo '```'
             echo "### mock-agent eval"
             echo '```'
-            grep -E "index |hit rate|MRR|latency|tool calls|evidence rate" eval-mock-agent.log 2>/dev/null || echo "(no output)"
+            grep -E "corpus |index |hit rate|MRR|latency|tool calls|evidence rate" eval-mock-agent.log 2>/dev/null || echo "(no output)"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 

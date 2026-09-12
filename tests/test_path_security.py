@@ -28,9 +28,15 @@ def sandbox(tmp_path: Path) -> Repository:
     "attempt",
     [
         "../outside.txt",
-        "..\\outside.txt",
         "sub/../../outside.txt",
         "./../outside.txt",
+        pytest.param(
+            "..\\outside.txt",
+            marks=pytest.mark.skipif(
+                os.name != "nt",
+                reason="a backslash is an ordinary filename character on POSIX, not a separator",
+            ),
+        ),
     ],
 )
 def test_relative_traversal_is_blocked(sandbox: Repository, attempt: str) -> None:
@@ -41,6 +47,24 @@ def test_relative_traversal_is_blocked(sandbox: Repository, attempt: str) -> Non
 def test_absolute_path_outside_root_is_blocked(sandbox: Repository, tmp_path: Path) -> None:
     with pytest.raises(PathSecurityError):
         sandbox.resolve(str(tmp_path / "outside.txt"))
+
+
+@pytest.mark.skipif(os.name == "nt", reason="covered by the Windows case above")
+def test_backslash_is_a_plain_filename_on_posix(sandbox: Repository) -> None:
+    """A Windows-style traversal string cannot escape a POSIX sandbox.
+
+    On POSIX a backslash is not a separator, so ``..\\outside.txt`` is a single
+    filename *inside* the root. It resolves inside the sandbox (and then simply
+    does not exist), which is safe - the sandbox never needs to reject it, and the
+    tool must still never return the file that really lives outside the root.
+    """
+    resolved = sandbox.resolve("..\\outside.txt")
+    assert resolved.parent == sandbox.root
+
+    tools = {tool.name: tool for tool in build_tools(sandbox)}
+    output = tools["read_file"].invoke({"path": "..\\outside.txt"})
+    assert output.startswith("ERROR:")
+    assert "OUTSIDE_SECRET_CONTENT" not in output
 
 
 def test_nul_byte_is_blocked(sandbox: Repository) -> None:
