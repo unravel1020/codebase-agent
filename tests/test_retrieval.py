@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from langchain_core.documents import Document
 
 from codebase_agent import HashingEmbeddings, Repository, VectorIndex, chunk_documents
 from codebase_agent.rag import CodeRetriever, build_retriever
@@ -61,6 +62,42 @@ def test_chunk_documents_are_deterministic(repo: Repository) -> None:
         (c.file, c.start_line, c.text) for c in second
     ]
     assert len(first) > len(documents), "small chunk size should split files"
+
+
+def test_duplicate_chunk_text_keeps_its_own_line_range() -> None:
+    """Regression: the same block twice must not both report the first location.
+
+    ``chunk_documents`` used to resolve a chunk with ``text.find(chunk)``, so the
+    second copy of a repeated block was cited at the first copy's line numbers.
+    """
+    block = "def average(values):\n    return sum(values) / len(values)\n"
+    text = block + "\n" + ("padding = 1  # filler\n" * 120) + "\n" + block
+    document = Document(page_content=text, metadata={"file": "dup.py", "suffix": ".py"})
+
+    chunks = chunk_documents([document], chunk_size=200, chunk_overlap=0)
+    lines = [chunk.start_line for chunk in chunks if "def average" in chunk.text]
+    source = text.splitlines()
+
+    assert len(lines) == 2, "the duplicated block should be chunked twice"
+    assert lines[0] != lines[1], "both copies were reported at the same offset"
+    assert lines[0] == 1
+    assert lines[1] == text[: text.rfind("def average")].count("\n") + 1
+    # The reported line must actually contain the code that was chunked.
+    for start_line in lines:
+        assert source[start_line - 1].strip() == "def average(values):"
+
+
+def test_every_chunk_starts_on_the_line_it_reports(repo: Repository, retriever: CodeRetriever) -> None:
+    """Invariant: a chunk's start_line points at its own first line."""
+    cache: dict[str, list[str]] = {}
+    for chunk in retriever.index.chunks:
+        if chunk.file not in cache:
+            cache[chunk.file] = repo.read_text(chunk.file, max_lines=10**6).text.splitlines()
+        lines = cache[chunk.file]
+        assert 1 <= chunk.start_line <= len(lines), chunk.location
+        assert lines[chunk.start_line - 1].strip() == chunk.text.splitlines()[0].strip(), (
+            f"{chunk.location} does not start on the line it claims"
+        )
 
 
 def test_hashing_embeddings_are_deterministic_and_normalized() -> None:

@@ -20,7 +20,7 @@ python -m codebase_agent ask --repo . "How does the path sandbox work?"
 
 * **做什么**：给一个本地代码仓库路径，用 LLM + 工具调用 + RAG 回答关于代码的问题，并输出结构化结果（summary / relevant_files / evidence / confidence）。
 * **默认模型**：DeepSeek（`deepseek-chat`），但只依赖 OpenAI-compatible 接口，`LLM_BASE_URL` + `LLM_MODEL` 可换任何厂商。
-* **离线可跑**：pytest 110 通过、retrieval eval、`ask --offline` 全流程都不需要 API key。
+* **离线可跑**：pytest 112 通过、retrieval eval、`ask --offline` 全流程都不需要 API key。
 * **不需要 key 的命令**：`index` / `search` / `grep` / `read` / `ask --offline`。
 * **需要 key 的**：`ask`（真实 LLM）、`evals/run_evals.py --mode llm`。
 </details>
@@ -251,7 +251,7 @@ provider preset, so any OpenAI-compatible vendor works.
 ## Testing
 
 ```bash
-python -m pytest -q            # 110 passed, 1 skipped (Windows symlink test)
+python -m pytest -q            # 112 passed, 1 skipped (Windows symlink test)
 ```
 
 | Test module | Tests | Covers |
@@ -259,7 +259,7 @@ python -m pytest -q            # 110 passed, 1 skipped (Windows symlink test)
 | `test_read_file.py` | 12 | whole-file/window reads, line numbering, size + binary + directory rejection, tool error strings |
 | `test_search_code.py` | 13 | definition ranking, line numbers, multi-token queries, `max_results`, regex mode, binary/excluded-dir skipping |
 | `test_path_security.py` | 13 | `../` traversal (both separators), absolute paths outside root, NUL bytes, empty paths, symlink escape, tool-level blocking |
-| `test_retrieval.py` | 13 | chunk metadata + line ranges, determinism, top-k relevance, score ordering, embedding similarity ordering, FAISS validation |
+| `test_retrieval.py` | 15 | chunk metadata + line ranges, duplicate-block line accuracy, determinism, top-k relevance, score ordering, embedding similarity ordering, FAISS validation |
 | `test_structured_output.py` | 13 | fenced/raw/prose JSON, invalid payloads, confidence bounds, file normalization, extra-key tolerance, JSON schema |
 | `test_agent_workflow.py` | 14 | full tool-calling loop, evidence nudge, confidence clamps, tool budget, unknown tool, failing tool, structured-output fallback, memory across turns |
 | `test_offline.py` | 7 | scripted model replay, heuristic policy state machine + reset, offline end-to-end |

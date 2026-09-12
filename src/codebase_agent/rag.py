@@ -39,7 +39,23 @@ def _line_span(text: str, start_index: int, chunk: str) -> tuple[int, int]:
     start_line = text[:start_index].count("\n") + 1
     end_line = start_line + max(chunk.count("\n"), 0)
     return start_line, end_line
-# todo fix the bug of the search. IF the same text reveals again, this func still find the first outcome.
+
+
+def _start_index(piece: Document, text: str, chunk: str) -> int:
+    """Return the exact offset of a chunk inside its source text.
+
+    The splitter reports a running cursor as ``start_index`` (it advances past
+    the previous chunk before searching), so the same text occurring twice in one
+    file resolves to two different offsets. Searching with a bare ``str.find``
+    would send both copies to the first occurrence, which is exactly the bug this
+    function avoids.
+    """
+    value = piece.metadata.get("start_index")
+    if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+        return value
+    found = text.find(chunk)
+    return found if found >= 0 else 0
+
 
 def chunk_documents(
     documents: Iterable[Document],
@@ -57,19 +73,18 @@ def chunk_documents(
         suffix = str(document.metadata.get("suffix", ""))
         file_path = str(document.metadata.get("file", "<unknown>"))
         splitter = _splitter_for(suffix, chunk_size, chunk_overlap)
-        for piece in splitter.split_text(text):
-            if not piece.strip():
+        for piece in splitter.split_documents([document]):
+            chunk = piece.page_content
+            if not chunk.strip():
                 continue
-            start_index = text.find(piece)
-            start_index = max(start_index, 0)
-            start_line, end_line = _line_span(text, start_index, piece)
+            start_line, end_line = _line_span(text, _start_index(piece, text, chunk), chunk)
             chunks.append(
                 RetrievedChunk(
                     file=file_path,
                     start_line=start_line,
                     end_line=end_line,
                     score=0.0,
-                    text=piece,
+                    text=chunk,
                     chunk_id=next_id,
                 )
             )
