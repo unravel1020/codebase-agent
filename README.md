@@ -1,5 +1,7 @@
 # codebase-agent
 
+[![CI](https://github.com/unravel1020/codebase-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/unravel1020/codebase-agent/actions/workflows/ci.yml)
+
 An LLM agent that answers questions about a **local code repository** — with tool
 calling, RAG retrieval, conversation memory, Pydantic structured output and an
 evaluation harness. Built as a small, readable reference for modern AI
@@ -125,11 +127,17 @@ Index construction is bounded by the repository sandbox; query-time retrieval re
 
 The source package contains the runtime and retrieval layers; `evals/` benchmarks them and `tests/` exercises the same wiring against a fixture repository.
 
+* `src/codebase_agent/` — the package: runtime, retrieval, tools, schemas and CLI.
+* `tests/` — 113 tests plus `tests/fixtures/sample_repo/`, the tiny repository used by the suite, the offline demo and CI.
+* `evals/` — `questions.json`, the harness, and generated `results/*.json` reports.
+* `docs/images/*.svg` — the diagrams referenced from this README; `docs/summary/` — longer written walkthroughs.
+* `.github/workflows/ci.yml` — the pipeline described under [Continuous integration](#continuous-integration).
+
 ---
 
 ## Install and run
 
-Requires Python 3.11+ (developed and verified on 3.14.5, Windows).
+Requires Python 3.11+ (developed on 3.14.5 / Windows, verified in CI on 3.11 and 3.14 / Linux).
 
 ```bash
 cd codebase-agent
@@ -271,6 +279,19 @@ No test needs an API key or the network: an autouse fixture clears LLM/embedding
 environment variables, and every model interaction goes through
 `ScriptedChatModel`.
 
+### Continuous integration
+
+`.github/workflows/ci.yml` runs on every push to `main` and every pull request, on
+Python **3.11** (the lower bound from `pyproject.toml`) and **3.14** (newest
+release). Each job installs the dependencies, checks that the package imports,
+runs the suite, exercises the offline agent demo, runs both offline evaluation
+modes, writes a run summary with the metrics, and uploads the eval JSON as an
+artifact. `faiss-cpu` ships an `abi3` wheel, so the same binary covers every
+supported interpreter.
+
+Everything in CI is API-key-free — the only mode that needs a key (`--mode llm`)
+is deliberately left to manual runs.
+
 ---
 
 ## Evaluation
@@ -399,7 +420,6 @@ How to read these numbers:
 * [ ] Cross-file symbol index for "where is X called" questions.
 * [ ] LLM-as-judge scoring in `evals/`, plus a stored baseline to diff against.
 * [ ] Streaming output in the CLI, and a `--no-retrieval` mode for pure tool use.
-* [ ] GitHub Actions workflow running `pytest` + `run_evals.py --mode retrieval`.
 
 ## Further reading
 

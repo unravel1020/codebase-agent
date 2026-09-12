@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: pytest + offline evals (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Lower bound from pyproject (requires-python >=3.11) and the newest
+        # release, which is what the project is developed against.
+        python-version: ["3.11", "3.14"]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -e .
+
+      - name: Import check
+        run: python -c "import codebase_agent; print('codebase-agent', codebase_agent.__version__)"
+
+      - name: Run tests
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m pytest -q --tb=short | tee pytest.log
+
+      - name: Offline agent demo (no API key)
+        run: |
+          python -m codebase_agent ask \
+            --repo tests/fixtures/sample_repo \
+            "How are calculation results persisted to disk?" \
+            --offline --json > demo.json
+          python -c "import json; d = json.load(open('demo.json')); print('tool calls:', d['tool_call_count'], '| used evidence:', d['used_evidence'], '| files:', d['answer']['relevant_files'])"
+
+      - name: Retrieval evaluation (no API key)
+        shell: bash
+        run: |
+          set -o pipefail
+          python evals/run_evals.py --mode retrieval | tee eval-retrieval.log
+
+      - name: Agent-loop evaluation (no API key)
+        shell: bash
+        run: |
+          set -o pipefail
+          python evals/run_evals.py --mode mock-agent | tee eval-mock-agent.log
+
+      - name: Write job summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## codebase-agent CI — Python ${{ matrix.python-version }}"
+            echo
+            echo "### pytest"
+            echo '```'
+            tail -n 4 pytest.log 2>/dev/null || echo "(no output)"
+            echo '```'
+            echo "### retrieval eval"
+            echo '```'
+            grep -E "index |hit rate|MRR|latency" eval-retrieval.log 2>/dev/null || echo "(no output)"
+            echo '```'
+            echo "### mock-agent eval"
+            echo '```'
+            grep -E "index |hit rate|MRR|latency|tool calls|evidence rate" eval-mock-agent.log 2>/dev/null || echo "(no output)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload eval reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: eval-reports-python-${{ matrix.python-version }}
+          path: evals/results/*.json
+          if-no-files-found: warn

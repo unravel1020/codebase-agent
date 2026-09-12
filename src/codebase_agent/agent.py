@@ -205,9 +205,13 @@ class CodebaseAgent:
             if not ai.tool_calls:
                 final = ai
                 break
-            #todo to be optimized: If the budget of tools run out, the more resaonable deals is to give the model last chance to answer without tools.
-
             if len(records) >= self.settings.max_tool_calls:
+                # TODO: give the model one final turn without tools instead of breaking
+                #   here. The nudge below only lands in the transcript - the model is
+                #   never invoked with it - so hitting the budget silently skips the
+                #   "answer with what you have" turn and synthesis runs on the collected
+                #   evidence alone. The transcript also keeps this AIMessage's unexecuted
+                #   tool_calls on record.
                 messages.append(
                     HumanMessage(
                         content=(
