@@ -70,6 +70,21 @@ def test_binary_suffix_files_are_not_indexed(repo: Repository) -> None:
     assert "app/calculator.py" in indexed
 
 
+def test_code_only_repository_skips_prose(sample_repo_path) -> None:
+    """`code_only` drops Markdown/plain text so docs cannot compete with source."""
+    everything = {s.rel_path for s in Repository(sample_repo_path).iter_source_files()}
+    code_only = {
+        s.rel_path for s in Repository(sample_repo_path, code_only=True).iter_source_files()
+    }
+
+    assert "README.md" in everything
+    assert "docs/notes.txt" in everything
+
+    assert "README.md" not in code_only
+    assert "docs/notes.txt" not in code_only
+    assert "app/calculator.py" in code_only
+
+
 def test_search_skips_excluded_dirs(tmp_path) -> None:
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "keep.py").write_text("MARKER_KEEP = 1\n", encoding="utf-8")

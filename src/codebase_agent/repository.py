@@ -220,6 +220,14 @@ TEXT_FILENAMES: frozenset[str] = frozenset(
     }
 )
 
+# Prose, as opposed to code. ``code_only`` repositories skip these, which matters
+# for retrieval benchmarks: a README that paraphrases every module answers the
+# questions in words, and would otherwise compete with the source files themselves.
+PROSE_SUFFIXES: frozenset[str] = frozenset({".md", ".rst", ".txt", ".adoc"})
+PROSE_FILENAMES: frozenset[str] = frozenset(
+    {"README", "LICENSE", "NOTICE", "CHANGELOG", "CONTRIBUTING"}
+)
+
 _DEF_TEMPLATES: tuple[str, ...] = (
     r"^\s*(?:async\s+)?def\s+{sym}\b",
     r"^\s*class\s+{sym}\b",
@@ -282,6 +290,7 @@ class Repository:
         max_file_bytes: int = 512_000,
         max_read_lines: int = 400,
         extra_excluded_dirs: tuple[str, ...] = (),
+        code_only: bool = False,
     ) -> None:
         candidate = Path(root).expanduser()
         if not candidate.exists():
@@ -292,6 +301,7 @@ class Repository:
         self.max_file_bytes = max_file_bytes
         self.max_read_lines = max_read_lines
         self.excluded_dirs = EXCLUDED_DIRS | frozenset(extra_excluded_dirs)
+        self.code_only = code_only
 
     def __repr__(self) -> str:  # pragma: no cover - debug helper
         return f"Repository(root={str(self.root)!r})"
@@ -347,6 +357,8 @@ class Repository:
             return False
         suffix = path.suffix.lower()
         if suffix in BINARY_SUFFIXES:
+            return False
+        if self.code_only and (suffix in PROSE_SUFFIXES or path.name in PROSE_FILENAMES):
             return False
         if suffix not in TEXT_SUFFIXES and path.name not in TEXT_FILENAMES:
             return False

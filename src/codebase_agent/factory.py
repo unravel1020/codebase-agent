@@ -22,13 +22,20 @@ def build_repository(
     settings: Settings,
     *,
     extra_excluded_dirs: tuple[str, ...] = (),
+    code_only: bool = False,
 ) -> Repository:
-    """Open a repository with the configured size/line limits."""
+    """Open a repository with the configured size/line limits.
+
+    ``code_only`` skips prose (Markdown/reStructuredText/plain text); the retrieval
+    benchmark uses it so that a README describing every module does not compete with
+    the source files it describes.
+    """
     return Repository(
         repo_path,
         max_file_bytes=settings.max_file_bytes,
         max_read_lines=settings.max_read_lines,
         extra_excluded_dirs=extra_excluded_dirs,
+        code_only=code_only,
     )
 
 

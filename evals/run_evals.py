@@ -215,6 +215,7 @@ def aggregate(results: list[QuestionResult], *, mode: str) -> dict[str, Any]:
 def print_report(report: dict[str, Any]) -> None:
     aggregate_data = report["aggregate"]
     print(f"\nmode            : {report['mode']}")
+    print(f"corpus          : {report.get('corpus', 'code')}")
     print(f"repository      : {report['repo']}")
     print(f"index           : {report['index']['chunks']} chunks / {report['index']['files']} files")
     print(f"model           : {report['settings']['model']} via {report['settings']['base_url']}")
@@ -261,6 +262,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("-k", type=int, default=0, help="top-k for retrieval (0 = RAG_TOP_K)")
     parser.add_argument("--out", default=str(DEFAULT_RESULTS_DIR), help="output directory")
     parser.add_argument(
+        "--corpus",
+        choices=("code", "all"),
+        default="code",
+        help="code = index source files only (default); all = include prose such as "
+        "README.md and docs/. The questions are about source files, and a README "
+        "that paraphrases every module otherwise wins on lexical similarity.",
+    )
+    parser.add_argument(
         "--exclude",
         nargs="*",
         default=["evals"],
@@ -273,7 +282,12 @@ def main(argv: list[str] | None = None) -> int:
     k = args.k or settings.top_k
     questions = load_questions(Path(args.questions))
 
-    repo = build_repository(args.repo, settings, extra_excluded_dirs=tuple(args.exclude or ()))
+    repo = build_repository(
+        args.repo,
+        settings,
+        extra_excluded_dirs=tuple(args.exclude or ()),
+        code_only=(args.corpus == "code"),
+    )
     retriever = build_retriever(repo, settings, build_embeddings(settings))
 
     if args.mode == "retrieval":
@@ -284,6 +298,7 @@ def main(argv: list[str] | None = None) -> int:
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     report: dict[str, Any] = {
         "mode": args.mode,
+        "corpus": args.corpus,
         "timestamp": timestamp,
         "repo": str(repo.root),
         "repo_stats": repo.stats(max_files=settings.max_index_files),
@@ -296,7 +311,7 @@ def main(argv: list[str] | None = None) -> int:
 
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_file = out_dir / f"{args.mode}-{timestamp}.json"
+    out_file = out_dir / f"{args.mode}-{args.corpus}-{timestamp}.json"
     out_file.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
 
     print_report(report)
