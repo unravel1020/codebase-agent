@@ -294,25 +294,42 @@ The evaluation harness runs independent questions through retrieval-only, offlin
 Metrics: `hit_rate`, `MRR`, `latency_ms_avg/max`, and for agent modes
 `tool_calls_avg/total`, `iterations_avg`, `evidence_rate`, `confidence_avg`.
 
-Recorded on 2026-09-09 against this repository (165 chunks / 41 files, offline
-`local` embeddings, `k=6`):
+Recorded on 2026-09-10 against this repository (210 chunks / 42 files, offline
+`local` embeddings, `k=6`). Reproduce with the two commands above:
 
 | Mode | Hit rate | MRR | Latency (avg) | Tool calls (avg) | Evidence rate |
 | --- | --- | --- | --- | --- | --- |
-| `retrieval` | 7/10 = 70% | 0.798 | 0.1 ms | – | – |
-| `mock-agent` | 4/10 = 40% | 0.542 | 58.8 ms | 2.00 | 100% |
+| `retrieval` | 5/10 = 50% | 0.633 | 0.1 ms | – | – |
+| `mock-agent` | 4/10 = 40% | 0.667 | 70.4 ms | 2.00 | 100% |
+| `llm` (deepseek-chat) | 10/10 = 100% | 1.000 | 7.5 s | 5.90 | 100% |
 
 How to read these numbers:
 
-* `retrieval` is the RAG baseline: 7/10 with purely lexical (hashing) embeddings.
-  The 3 misses are paraphrase questions ("FAISS vector index ... normalized")
-  where the expected file uses different wording — exactly the gap a real
-  embedding model closes.
+* `llm` is the mode that matters: with a real model the agent reaches 10/10 with
+  100% evidence rate, 5.9 tool calls and 0.914 average self-reported confidence —
+  because it can *choose* `search_code` for symbol questions instead of relying on
+  vector similarity alone.
+* `retrieval` is the RAG-only baseline and it is deliberately unflattering. With
+  lexical (hashing) embeddings, `README.md` — 20 KB of prose that describes every
+  module in words — wins the top spot for 6 of the 10 questions, ahead of the
+  source files it describes. The score also moved from 70% (165 chunks) to 50%
+  (210 chunks) purely because the README grew; the chunker fix that landed in
+  between provably emits identical chunk text (210 vs 210, zero differences), so
+  it cannot affect this metric. This is a corpus/diagnostic effect, and the honest
+  way to read it is: *the offline baseline is fragile against prose-heavy docs,
+  and the agent's tool use is what absorbs that fragility.*
 * `mock-agent` measures the **loop**, not model quality: the heuristic policy
   ranks files by keyword hits only, yet it reaches 100% evidence rate with 2 tool
-  calls per question. A real LLM (`--mode llm`) is what raises answer quality.
+  calls per question.
 * The questions file is excluded from the index by default (`--exclude evals`) to
-  avoid the questions matching themselves; this alone moved MRR from 0.488 to 0.798.
+  avoid the questions matching themselves; this alone moved MRR from 0.488 to 0.798
+  at the time it was introduced. Running the code-only corpus
+  (`--exclude evals docs README.md`) restores 8/10 = 80% with MRR 0.729 (167 chunks
+  / 38 files) — the same retriever, only the prose removed, which isolates the
+  cause of the drop above.
+* Every number here is reproducible on the current commit; if a corpus change
+  moves them, update this table in the same commit rather than leaving stale
+  figures behind.
 
 ---
 
@@ -343,8 +360,11 @@ How to read these numbers:
 ## Known limitations
 
 1. **Lexical embeddings by default.** The offline hashing embedder has no semantic
-   generalization; paraphrase questions miss (see the eval above). Set
-   `EMBEDDING_PROVIDER=openai` with a real embedding model for better recall.
+   generalization; paraphrase questions miss (see the eval above). It is also
+   easily swamped by large prose documents: `README.md` outranks the source files
+   it describes for 6 of the 10 questions, which is why the retrieval baseline sits
+   at 50%. Set `EMBEDDING_PROVIDER=openai` with a real embedding model, or let the
+   agent use `search_code` instead of vector search, for better recall.
 2. **`search_code` re-reads files on every call.** Fine for repos up to a few
    hundred files; a large monorepo would want a cached content pass or an
    incremental index. There is also no cross-file symbol index (e.g. "who calls
