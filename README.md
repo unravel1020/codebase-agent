@@ -381,6 +381,13 @@ How to read these numbers:
 * [ ] Streaming output in the CLI, and a `--no-retrieval` mode for pure tool use.
 * [ ] GitHub Actions workflow running `pytest` + `run_evals.py --mode retrieval`.
 
+## Further reading
+
+* [从 `bind_tools` 到 `ToolMessage`：Agent 的 Tool Calling 到底是怎么运行的？](docs/summary/tool-calling.md)
+  — a walkthrough of the tool-calling path in this project: how tools are bound,
+  what the model actually returns, how `ToolMessage` closes the loop, and how the
+  audit trail is recorded.
+
 ## License
 
 MIT.
