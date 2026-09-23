@@ -22,7 +22,7 @@ python -m codebase_agent ask --repo . "How does the path sandbox work?"
 
 * **做什么**：给一个本地代码仓库路径，用 LLM + 工具调用 + RAG 回答关于代码的问题，并输出结构化结果（summary / relevant_files / evidence / confidence）。
 * **默认模型**：DeepSeek（`deepseek-chat`），但只依赖 OpenAI-compatible 接口，`LLM_BASE_URL` + `LLM_MODEL` 可换任何厂商。
-* **离线可跑**：pytest 113 passed（Linux 114 passed）、retrieval eval、`ask --offline` 全流程都不需要 API key。
+* **离线可跑**：pytest 115 passed（Linux 116 passed）、retrieval eval、`ask --offline` 全流程都不需要 API key。
 * **不需要 key 的命令**：`index` / `search` / `grep` / `read` / `ask --offline`。
 * **需要 key 的**：`ask`（真实 LLM）、`evals/run_evals.py --mode llm`。
 </details>
@@ -65,8 +65,10 @@ Module responsibilities (one job each):
 3. **Tool step** — every requested tool is executed through the LangChain tool
    interface, timed, recorded in a `ToolCallRecord`, and appended back as a
    `ToolMessage` (keyed by `tool_call_id`).
-4. **Loop** — repeat until the model answers, `AGENT_MAX_ITERATIONS` is hit, or
-   `AGENT_MAX_TOOL_CALLS` is reached (then the model is told to answer with what it has).
+4. **Loop** — repeat until the model answers or `AGENT_MAX_ITERATIONS` is hit. When
+   `AGENT_MAX_TOOL_CALLS` is reached, the runtime appends a budget nudge and invokes
+   the original model once without tools; any tool calls in that final draft are not
+   executed, recorded, or treated as evidence.
 5. **Evidence guard** — if the model answered *without a single tool call* and
    `AGENT_REQUIRE_EVIDENCE=1`, the loop injects a nudge and runs once more. If it
    still has no evidence, confidence is clamped to ≤ 0.2 and a warning is added.
@@ -89,7 +91,7 @@ Properties that make it testable:
 
 ![Codebase Agent tool-calling loop](docs/images/agent-loop.svg)
 
-The loop records every tool call, nudges once when evidence is missing, enforces iteration and tool-call budgets, then produces a guarded structured answer and updates memory.
+The loop records every executed tool call, nudges once when evidence is missing, uses a no-tools final turn at the tool budget, then produces a guarded structured answer and updates memory.
 
 ---
 
@@ -128,7 +130,7 @@ Index construction is bounded by the repository sandbox; query-time retrieval re
 The source package contains the runtime and retrieval layers; `evals/` benchmarks them and `tests/` exercises the same wiring against a fixture repository.
 
 * `src/codebase_agent/` — the package: runtime, retrieval, tools, schemas and CLI.
-* `tests/` — 113 tests plus `tests/fixtures/sample_repo/`, the tiny repository used by the suite, the offline demo and CI.
+* `tests/` — 115 tests plus `tests/fixtures/sample_repo/`, the tiny repository used by the suite, the offline demo and CI.
 * `evals/` — `questions.json`, the harness, and generated `results/*.json` reports.
 * `docs/images/*.svg` — the diagrams referenced from this README; `docs/summary/` — longer written walkthroughs.
 * `.github/workflows/ci.yml` — the pipeline described under [Continuous integration](#continuous-integration).
@@ -259,7 +261,7 @@ provider preset, so any OpenAI-compatible vendor works.
 ## Testing
 
 ```bash
-python -m pytest -q     # Windows: 113 passed, 2 skipped   |   Linux: 114 passed, 1 skipped
+python -m pytest -q     # Windows: 115 passed, 2 skipped   |   Linux: 116 passed, 1 skipped
 ```
 
 The two skips are platform-conditional, not missing coverage: the symlink-escape
@@ -275,7 +277,7 @@ that side instead.
 | `test_path_security.py` | 14 | `../` traversal (both separators, platform-aware), absolute paths outside root, NUL bytes, empty paths, symlink escape, tool-level blocking |
 | `test_retrieval.py` | 15 | chunk metadata + line ranges, duplicate-block line accuracy, determinism, top-k relevance, score ordering, embedding similarity ordering, FAISS validation |
 | `test_structured_output.py` | 13 | fenced/raw/prose JSON, invalid payloads, confidence bounds, file normalization, extra-key tolerance, JSON schema |
-| `test_agent_workflow.py` | 14 | full tool-calling loop, evidence nudge, confidence clamps, tool budget, unknown tool, failing tool, structured-output fallback, memory across turns |
+| `test_agent_workflow.py` | 16 | full tool-calling loop, evidence nudge, confidence clamps, tool budget, unknown tool, failing tool, structured-output fallback, memory across turns |
 | `test_offline.py` | 7 | scripted model replay, heuristic policy state machine + reset, offline end-to-end |
 | `test_memory.py` | 5 | sliding window, copy semantics, transcript |
 | `test_config.py` | 11 | defaults (DeepSeek), presets, overrides, `.env` loading, key fallback, masking, bad values |
@@ -423,6 +425,10 @@ How to read these numbers:
    encrypt.
 10. **Python 3.11+ only.** Verified on 3.14.5; `faiss-cpu`, `langchain-core`,
     `langchain-openai` and `pytest` all resolve to prebuilt wheels there.
+
+The tool budget path deliberately gives the model one final no-tools turn so it can
+summarize the evidence already collected. A tool call emitted in that final draft is
+never executed or added to the evidence audit trail.
 
 ## TODO
 

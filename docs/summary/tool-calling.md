@@ -390,6 +390,23 @@ max_tool_calls
 
 ---
 
+## 7.3 Tool Budget 用尽后的最终回合
+
+当已经执行了 `max_tool_calls` 次工具，而模型又请求下一次 Tool 时，Runtime
+不会执行这个超预算请求。它会把一条明确的 budget nudge 放入 transcript，然后
+调用原始的 `self.llm.invoke(messages)` 一次（不是 `llm.bind_tools(tools)`），让
+模型在没有工具权限的情况下用已有证据完成最终草稿。
+
+这个最终 `AIMessage` 会保留在 transcript，并交给后续 structured synthesis 作为
+草稿参考；其中即使包含 `tool_calls`，也不会创建 `ToolCallRecord`、不会追加
+`ToolMessage`，也不会被当作 evidence。这样工具预算仍然是硬上限，同时不会
+因为最后一次工具请求而丢掉回答机会。
+
+如果该强制终轮调用失败，Runtime 会回退到现有 synthesis/fallback 流程，继续
+使用已经收集到的工具记录，避免预算控制错误把整次回答变成异常。
+
+---
+
 # 8. 真正执行 Tool 的不是 LLM
 
 假设模型产生：

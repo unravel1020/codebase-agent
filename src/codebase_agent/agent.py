@@ -173,7 +173,7 @@ class CodebaseAgent:
             # No evidence at all: nudge once, then accept a low-confidence answer.
             messages.append(HumanMessage(content=EVIDENCE_NUDGE))
 
-        answer = self._synthesize(question, messages, records)
+        answer = self._synthesize(question, messages, records, final)
         answer = self._apply_guards(answer, records)
 
         self.memory.add_turn(question, answer.summary)
@@ -206,21 +206,26 @@ class CodebaseAgent:
                 final = ai
                 break
             if len(records) >= self.settings.max_tool_calls:
-                # TODO: give the model one final turn without tools instead of breaking
-                #   here. The nudge below only lands in the transcript - the model is
-                #   never invoked with it - so hitting the budget silently skips the
-                #   "answer with what you have" turn and synthesis runs on the collected
-                #   evidence alone. The transcript also keeps this AIMessage's unexecuted
-                #   tool_calls on record.
-                messages.append(
-                    HumanMessage(
-                        content=(
-                            f"Tool budget reached ({self.settings.max_tool_calls} calls). "
-                            "Answer now using the evidence you already have."
-                        )
+                budget_nudge = HumanMessage(
+                    content=(
+                        f"Tool budget reached ({self.settings.max_tool_calls} calls). "
+                        "Answer now using the evidence you already have, without calling tools."
                     )
                 )
-                final = ai
+                messages.append(budget_nudge)
+                try:
+                    # Deliberately use the unbound model: any tool calls returned here
+                    # are a draft mistake and must never be executed or recorded.
+                    forced = self.llm.invoke(messages)
+                except Exception:
+                    # Keep the existing synthesis/fallback path usable if the forced
+                    # completion fails; the collected records remain authoritative.
+                    final = ai
+                    break
+                if not isinstance(forced, AIMessage):  # pragma: no cover - defensive
+                    forced = AIMessage(content=str(forced))
+                messages.append(forced)
+                final = forced
                 break
 
             for call in ai.tool_calls:
@@ -275,9 +280,13 @@ class CodebaseAgent:
         question: str,
         messages: list[BaseMessage],
         records: list[ToolCallRecord],
+        final: AIMessage | None = None,
     ) -> CodeAnswer:
         """Turn the investigation into the Pydantic structured answer."""
         evidence = self._evidence_block(records)
+        draft = ""
+        if final is not None:
+            draft = final.content if isinstance(final.content, str) else str(final.content)
         repo_line = f"Repository: {self.repo_name}\n" if self.repo_name else ""
         prompt: list[BaseMessage] = [
             SystemMessage(content=SYNTHESIS_SYSTEM),
@@ -286,6 +295,8 @@ class CodebaseAgent:
                     f"{repo_line}Question:\n{question}\n\n"
                     f"Repository evidence gathered by tools:\n"
                     f"{evidence or '(no tool calls were made - there is no evidence)'}\n\n"
+                    f"Model's final draft (use only as a draft, not as evidence):\n"
+                    f"{draft or '(none)'}\n\n"
                     "Return the JSON object now."
                 )
             ),

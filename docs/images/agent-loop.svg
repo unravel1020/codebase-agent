@@ -62,8 +62,8 @@
 
   <rect class="guard" x="970" y="845" width="390" height="126" rx="12"/>
   <text class="h" x="1165" y="879" text-anchor="middle">budget / completion</text>
-  <text class="t" x="1165" y="904" text-anchor="middle">max iterations or tool calls → answer now</text>
-  <text class="s" x="1165" y="931" text-anchor="middle">otherwise final AIMessage is accepted</text>
+  <text class="t" x="1165" y="904" text-anchor="middle">max iterations → final; tool budget → nudge</text>
+  <text class="s" x="1165" y="931" text-anchor="middle">raw self.llm.invoke() once, with no tools</text>
   <path class="line" d="M970 908 H810 V1020"/>
 
   <rect class="out" x="480" y="1020" width="440" height="80" rx="12"/>
@@ -76,5 +76,5 @@
   <text class="s" x="1230" y="1076" text-anchor="middle">Markdown or JSON</text>
 
   <text class="s" x="60" y="1128">Guard outcomes: no successful tool call → confidence ≤ 0.2; no cited evidence → confidence ≤ 0.5.</text>
-  <text class="s" x="60" y="1148">Green arrows loop through tools; the pink guard path forces completion at hard budgets.</text>
+  <text class="s" x="60" y="1148">Green arrows loop through tools; the pink path forces a no-tools final draft at hard budgets.</text>
 </svg>

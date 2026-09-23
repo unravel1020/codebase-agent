@@ -149,13 +149,17 @@ def test_confidence_is_capped_when_evidence_list_is_empty(
 
 
 def test_tool_budget_is_enforced(repo: Repository, retriever) -> None:
-    agent, _ = make_agent(
+    budget_answer = {
+        **FINAL_JSON,
+        "summary": "The forced no-tools turn produced this answer from the collected evidence.",
+    }
+    agent, llm = make_agent(
         repo,
         retriever,
         [
             tool_call("search_code", {"query": "average"}),
             tool_call("search_code", {"query": "Calculator"}),
-            AIMessage(content=json.dumps(FINAL_JSON)),
+            AIMessage(content=json.dumps(budget_answer)),
         ],
         settings=Settings(max_tool_calls=1),
     )
@@ -163,6 +167,96 @@ def test_tool_budget_is_enforced(repo: Repository, retriever) -> None:
 
     assert result.tool_call_count == 1
     assert any("Tool budget reached" in str(m.content) for m in result.messages)
+    assert llm.invocation_count == 3  # two bound decisions + one raw no-tools turn
+    assert len([m for m in result.messages if isinstance(m, ToolMessage)]) == 1
+    assert isinstance(result.messages[-1], AIMessage)
+    assert not result.messages[-1].tool_calls
+    assert result.messages[-1].content == json.dumps(budget_answer)
+    assert result.answer.summary == budget_answer["summary"]
+
+
+def test_budget_final_turn_never_executes_extra_tool_calls(repo: Repository, retriever) -> None:
+    agent, llm = make_agent(
+        repo,
+        retriever,
+        [
+            tool_call("search_code", {"query": "average"}),
+            tool_call("read_file", {"path": "app/calculator.py"}),
+            AIMessage(content=json.dumps({**FINAL_JSON, "confidence": 0.95})),
+        ],
+        settings=Settings(max_tool_calls=1),
+    )
+
+    result = agent.run("How is the average computed?")
+
+    assert [record.name for record in result.tool_calls] == ["search_code"]
+    assert len([m for m in result.messages if isinstance(m, ToolMessage)]) == 1
+    assert llm.invocation_count == 3
+    assert result.answer.confidence == pytest.approx(0.95)
+
+
+def test_budget_final_tool_calls_do_not_use_old_memory_draft(
+    repo: Repository, retriever, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    memory = ConversationMemory(max_turns=3)
+    memory.add_turn("old question", "OLD MEMORY DRAFT MUST NOT BE USED")
+    forced_payload = {
+        **FINAL_JSON,
+        "summary": "FORCED DRAFT WITH AN UNEXECUTED TOOL CALL",
+    }
+    captured_synthesis_inputs: list[list] = []
+    original_structured_output = ScriptedChatModel.with_structured_output
+
+    class CapturingRunnable:
+        def __init__(self, inner) -> None:
+            self.inner = inner
+
+        def invoke(self, messages):
+            captured_synthesis_inputs.append(list(messages))
+            return self.inner.invoke(messages)
+
+    def capturing_structured_output(self, schema=None, **kwargs):
+        return CapturingRunnable(original_structured_output(self, schema, **kwargs))
+
+    monkeypatch.setattr(ScriptedChatModel, "with_structured_output", capturing_structured_output)
+    agent, llm = make_agent(
+        repo,
+        retriever,
+        [
+            tool_call("search_code", {"query": "average"}),
+            tool_call("read_file", {"path": "app/calculator.py"}),
+            AIMessage(
+                content=json.dumps(forced_payload),
+                tool_calls=[
+                    {
+                        "name": "read_file",
+                        "args": {"path": "app/storage.py"},
+                        "id": "unexecuted-final-call",
+                    }
+                ],
+            ),
+        ],
+        settings=Settings(max_tool_calls=1),
+        memory=memory,
+    )
+
+    result = agent.run("How is the average computed?")
+
+    assert result.tool_call_count == 1
+    assert [record.name for record in result.tool_calls] == ["search_code"]
+    assert len([m for m in result.messages if isinstance(m, ToolMessage)]) == 1
+    assert llm.invocation_count == 3
+    assert isinstance(result.messages[-1], AIMessage)
+    assert result.messages[-1].tool_calls
+    assert result.answer.summary == forced_payload["summary"]
+    assert "OLD MEMORY DRAFT" not in result.answer.summary
+    synthesis_human = next(
+        message
+        for message in captured_synthesis_inputs[0]
+        if isinstance(message, HumanMessage)
+    )
+    assert forced_payload["summary"] in synthesis_human.content
+    assert "OLD MEMORY DRAFT" not in synthesis_human.content
 
 
 def test_unknown_tool_is_reported_not_fatal(repo: Repository, retriever) -> None:
